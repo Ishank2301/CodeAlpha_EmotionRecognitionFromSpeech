@@ -121,6 +121,26 @@ st.markdown(
         font-size: 13px; letter-spacing: 1px; width: 100%;
     }
     .stButton > button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .block-container {
+        max-width: 1320px;
+        padding-top: 32px;
+        padding-bottom: 48px;
+    }
+    .visualization-wrap {
+        margin-top: 32px;
+        padding-top: 18px;
+        border-top: 1px solid #1F2937;
+    }
+    div[data-testid="stVerticalBlock"] > div:has(> .section-header) {
+        margin-bottom: 6px;
+    }
+    div[data-testid="stTabs"] button {
+        color: #CBD5E0;
+        font-family: 'Space Mono', monospace;
+        font-size: 12px;
+        letter-spacing: 1px;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -279,183 +299,167 @@ with col_result:
             unsafe_allow_html=True,
         )
 
-    if uploaded_file and analyze_btn:
-        st.markdown("---")
+if uploaded_file and analyze_btn:
+    st.markdown(
+        "<div class='visualization-wrap'><div class='section-header'>Audio Visualizations</div></div>",
+        unsafe_allow_html=True,
+    )
+    viz_col1, viz_col2 = st.columns([1, 1], gap="large")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+        tmp_path = tmp_file.name
+        tmp_file.write(audio_bytes)
+
+    try:
+        y_viz, _ = librosa.load(tmp_path, sr=22050, duration=3)
+
+        with viz_col1:
+            fig, ax = plt.subplots(figsize=(10, 4), facecolor="#1E2433")
+            ax.set_facecolor("#1E2433")
+            times = np.linspace(0, len(y_viz) / 22050, len(y_viz))
+            ax.plot(times, y_viz, color="#6366F1", linewidth=1.2, alpha=0.95)
+            ax.fill_between(times, y_viz, alpha=0.22, color="#6366F1")
+            ax.set_title("Waveform", color="#CBD5E0", fontsize=13, pad=10)
+            ax.tick_params(colors="#64748B", labelsize=9)
+            for spine in ax.spines.values():
+                spine.set_color("#2D3748")
+            ax.set_xlabel("Time (s)", color="#64748B", fontsize=10)
+            ax.set_ylabel("Amplitude", color="#64748B", fontsize=10)
+            fig.tight_layout(pad=1.6)
+            st.pyplot(fig, use_container_width=True)
+            plt.close()
+
+        with viz_col2:
+            fig, ax = plt.subplots(figsize=(10, 4), facecolor="#1E2433")
+            ax.set_facecolor("#1E2433")
+            mel = librosa.feature.melspectrogram(y=y_viz, sr=22050, n_mels=128)
+            mel_db = librosa.power_to_db(mel, ref=np.max)
+            librosa.display.specshow(
+                mel_db,
+                sr=22050,
+                hop_length=512,
+                x_axis="time",
+                y_axis="mel",
+                ax=ax,
+                cmap="magma",
+            )
+            ax.set_title("Mel Spectrogram", color="#CBD5E0", fontsize=13, pad=10)
+            ax.tick_params(colors="#64748B", labelsize=9)
+            for spine in ax.spines.values():
+                spine.set_color("#2D3748")
+            ax.set_xlabel("Time (s)", color="#64748B", fontsize=10)
+            ax.set_ylabel("Frequency", color="#64748B", fontsize=10)
+            fig.tight_layout(pad=1.6)
+            st.pyplot(fig, use_container_width=True)
+            plt.close()
+
         st.markdown(
-            "<div class='section-header'>Audio Visualizations</div>",
+            "<br><div class='section-header'>Feature Visualizations</div>",
             unsafe_allow_html=True,
         )
-        viz_col1, viz_col2 = st.columns(2)
-
-        # Create a temporary file to load audio for visualization
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-            tmp_path = tmp_file.name
-            tmp_file.write(audio_bytes)
-
-        try:
-            y_viz, _ = librosa.load(tmp_path, sr=22050, duration=3)
-
-            with viz_col1:
-                fig, ax = plt.subplots(figsize=(6, 2.5), facecolor="#1E2433")
-                ax.set_facecolor("#1E2433")
-                times = np.linspace(0, len(y_viz) / 22050, len(y_viz))
-                ax.plot(times, y_viz, color="#6366F1", linewidth=0.8, alpha=0.9)
-                ax.fill_between(times, y_viz, alpha=0.2, color="#6366F1")
-                ax.set_title("Waveform", color="#94A3B8", fontsize=11, pad=8)
-                ax.tick_params(colors="#4B5563")
-                for spine in ax.spines.values():
-                    spine.set_color("#2D3748")
-                ax.set_xlabel("Time (s)", color="#4B5563", fontsize=9)
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close()
-
-            with viz_col2:
-                fig, ax = plt.subplots(figsize=(6, 2.5), facecolor="#1E2433")
-                ax.set_facecolor("#1E2433")
-                mel = librosa.feature.melspectrogram(y=y_viz, sr=22050)
-                mel_db = librosa.power_to_db(mel, ref=np.max)
-                librosa.display.specshow(
-                    mel_db,
-                    sr=22050,
-                    hop_length=512,
-                    x_axis="time",
-                    y_axis="mel",
-                    ax=ax,
-                    cmap="magma",
-                )
-                ax.set_title("Mel Spectrogram", color="#94A3B8", fontsize=11, pad=8)
-                ax.tick_params(colors="#4B5563")
-                for spine in ax.spines.values():
-                    spine.set_color("#2D3748")
-                ax.set_xlabel("Time (s)", color="#4B5563", fontsize=9)
-                ax.set_ylabel("Hz", color="#4B5563", fontsize=9)
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close()
-        finally:
-            # Clean up the temporary file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-
-        # Feature Visualizations
-        st.markdown("---")
-        st.markdown(
-            "<div class='section-header'>Feature Visualizations</div>",
-            unsafe_allow_html=True,
+        mfcc_tab, mel_tab, chroma_tab, energy_tab = st.tabs(
+            ["MFCC", "Mel", "Chroma", "ZCR + RMS"]
         )
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-            tmp_path = tmp_file.name
-            tmp_file.write(audio_bytes)
-
-        try:
-            y_feat, _ = librosa.load(tmp_path, sr=22050, duration=3)
-
-            # MFCC
-            mfcc = librosa.feature.mfcc(y=y_feat, sr=22050, n_mfcc=40)
-            fig, ax = plt.subplots(figsize=(10, 3), facecolor="#1E2433")
+        with mfcc_tab:
+            mfcc = librosa.feature.mfcc(y=y_viz, sr=22050, n_mfcc=40)
+            fig, ax = plt.subplots(figsize=(14, 5), facecolor="#1E2433")
             ax.set_facecolor("#1E2433")
             img = librosa.display.specshow(
                 mfcc, sr=22050, x_axis="time", y_axis="mel", ax=ax, cmap="viridis"
             )
-            ax.set_title("MFCC (40 coefficients)", color="#94A3B8", fontsize=11, pad=8)
-            ax.tick_params(colors="#4B5563")
+            ax.set_title("MFCC (40 coefficients)", color="#CBD5E0", fontsize=14, pad=12)
+            ax.tick_params(colors="#64748B", labelsize=10)
             for spine in ax.spines.values():
                 spine.set_color("#2D3748")
-            cbar = plt.colorbar(img, ax=ax, format="%+2.0f dB")
-            cbar.ax.tick_params(colors="#4B5563")
-            plt.tight_layout()
-            st.pyplot(fig)
+            cbar = plt.colorbar(img, ax=ax, format="%+2.0f dB", pad=0.015)
+            cbar.ax.tick_params(colors="#64748B")
+            fig.tight_layout(pad=1.8)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
-            # Mel Spectrogram
-            mel = librosa.feature.melspectrogram(y=y_feat, sr=22050, n_mels=128)
+        with mel_tab:
+            mel = librosa.feature.melspectrogram(y=y_viz, sr=22050, n_mels=128)
             mel_db = librosa.power_to_db(mel, ref=np.max)
-            fig, ax = plt.subplots(figsize=(10, 3), facecolor="#1E2433")
+            fig, ax = plt.subplots(figsize=(14, 5), facecolor="#1E2433")
             ax.set_facecolor("#1E2433")
             img = librosa.display.specshow(
                 mel_db, sr=22050, x_axis="time", y_axis="mel", ax=ax, cmap="magma"
             )
-            ax.set_title(
-                "Mel Spectrogram (128 bins)", color="#94A3B8", fontsize=11, pad=8
-            )
-            ax.tick_params(colors="#4B5563")
+            ax.set_title("Mel Spectrogram (128 bins)", color="#CBD5E0", fontsize=14, pad=12)
+            ax.tick_params(colors="#64748B", labelsize=10)
             for spine in ax.spines.values():
                 spine.set_color("#2D3748")
-            cbar = plt.colorbar(img, ax=ax, format="%+2.0f dB")
-            cbar.ax.tick_params(colors="#4B5563")
-            plt.tight_layout()
-            st.pyplot(fig)
+            cbar = plt.colorbar(img, ax=ax, format="%+2.0f dB", pad=0.015)
+            cbar.ax.tick_params(colors="#64748B")
+            fig.tight_layout(pad=1.8)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
-            # Chroma STFT
-            chroma = librosa.feature.chroma_stft(y=y_feat, sr=22050)
-            fig, ax = plt.subplots(figsize=(10, 2), facecolor="#1E2433")
+        with chroma_tab:
+            chroma = librosa.feature.chroma_stft(y=y_viz, sr=22050)
+            fig, ax = plt.subplots(figsize=(14, 4.5), facecolor="#1E2433")
             ax.set_facecolor("#1E2433")
             img = librosa.display.specshow(
                 chroma, sr=22050, x_axis="time", y_axis="chroma", ax=ax, cmap="coolwarm"
             )
             ax.set_title(
-                "Chroma STFT (12 pitch classes)", color="#94A3B8", fontsize=11, pad=8
+                "Chroma STFT (12 pitch classes)", color="#CBD5E0", fontsize=14, pad=12
             )
-            ax.tick_params(colors="#4B5563")
+            ax.tick_params(colors="#64748B", labelsize=10)
             for spine in ax.spines.values():
                 spine.set_color("#2D3748")
-            cbar = plt.colorbar(img, ax=ax)
-            cbar.ax.tick_params(colors="#4B5563")
-            plt.tight_layout()
-            st.pyplot(fig)
+            cbar = plt.colorbar(img, ax=ax, pad=0.015)
+            cbar.ax.tick_params(colors="#64748B")
+            fig.tight_layout(pad=1.8)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
-            # Zero Crossing Rate & RMS Energy
-            zcr = librosa.feature.zero_crossing_rate(y_feat)[0]
-            rms = librosa.feature.rms(y=y_feat)[0]
-
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 4), facecolor="#1E2433")
-
-            # ZCR
-            ax1.set_facecolor("#1E2433")
+        with energy_tab:
+            zcr = librosa.feature.zero_crossing_rate(y_viz)[0]
+            rms = librosa.feature.rms(y=y_viz)[0]
             frames = range(len(zcr))
             t = librosa.frames_to_time(frames, sr=22050)
-            ax1.fill_between(t, zcr, alpha=0.6, color="#10B981", label="ZCR")
-            ax1.plot(t, zcr, color="#059669", linewidth=1.5)
-            ax1.set_title(
-                "Zero Crossing Rate (ZCR)", color="#94A3B8", fontsize=11, pad=8
+
+            fig, (ax1, ax2) = plt.subplots(
+                2, 1, figsize=(14, 6.5), facecolor="#1E2433", sharex=True
             )
-            ax1.set_ylabel("ZCR", color="#4B5563")
-            ax1.tick_params(colors="#4B5563")
+
+            ax1.set_facecolor("#1E2433")
+            ax1.fill_between(t, zcr, alpha=0.45, color="#10B981", label="ZCR")
+            ax1.plot(t, zcr, color="#34D399", linewidth=1.8)
+            ax1.set_title("Zero Crossing Rate (ZCR)", color="#CBD5E0", fontsize=13, pad=10)
+            ax1.set_ylabel("ZCR", color="#64748B")
+            ax1.tick_params(colors="#64748B", labelsize=10)
             for spine in ax1.spines.values():
                 spine.set_color("#2D3748")
             ax1.legend(
                 loc="upper right",
                 facecolor="#1E2433",
                 edgecolor="#2D3748",
-                labelcolor="#94A3B8",
+                labelcolor="#CBD5E0",
             )
 
-            # RMS
             ax2.set_facecolor("#1E2433")
-            ax2.fill_between(t, rms, alpha=0.6, color="#3B82F6", label="RMS Energy")
-            ax2.plot(t, rms, color="#1D4ED8", linewidth=1.5)
-            ax2.set_title("RMS Energy", color="#94A3B8", fontsize=11, pad=8)
-            ax2.set_xlabel("Time (s)", color="#4B5563", fontsize=9)
-            ax2.set_ylabel("RMS", color="#4B5563")
-            ax2.tick_params(colors="#4B5563")
+            ax2.fill_between(t, rms, alpha=0.45, color="#3B82F6", label="RMS Energy")
+            ax2.plot(t, rms, color="#60A5FA", linewidth=1.8)
+            ax2.set_title("RMS Energy", color="#CBD5E0", fontsize=13, pad=10)
+            ax2.set_xlabel("Time (s)", color="#64748B", fontsize=10)
+            ax2.set_ylabel("RMS", color="#64748B")
+            ax2.tick_params(colors="#64748B", labelsize=10)
             for spine in ax2.spines.values():
                 spine.set_color("#2D3748")
             ax2.legend(
                 loc="upper right",
                 facecolor="#1E2433",
                 edgecolor="#2D3748",
-                labelcolor="#94A3B8",
+                labelcolor="#CBD5E0",
             )
 
-            plt.tight_layout()
-            st.pyplot(fig)
+            fig.tight_layout(pad=1.8)
+            st.pyplot(fig, use_container_width=True)
             plt.close()
 
-        finally:
-            # Clean up the temporary file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
