@@ -1,0 +1,70 @@
+# -------------------
+# Python
+# -------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+myvenv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment Variables
+.env
+
+# -------------------
+# ML Models
+# -------------------
+models/*.keras
+models/*.h5
+models/*.pkl
+
+# Keep folder structure
+!models/.gitkeep
+
+# -------------------
+# Reports
+# -------------------
+reports/*.png
+reports/*.jpg
+reports/*.txt
+
+# Keep folder structure
+!reports/.gitkeep
+
+# -------------------
+# Dataset
+# -------------------
+data/
+RAVDESS/
+
+# Audio Files
+*.wav
+*.mp3
+*.flac
+
+# Temporary files
+temp/
+cache/
+
+# Streamlit
+.streamlit/
+
+# TensorFlow
+.tensorboard-info/
